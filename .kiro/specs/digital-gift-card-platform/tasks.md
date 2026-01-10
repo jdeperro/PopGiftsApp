@@ -1,0 +1,503 @@
+# Implementation Plan
+
+- [ ] 1. Set up monorepo structure and development environment
+  - Create monorepo with packages for frontend-web, backend-api, shared-types, and ai-agents
+  - Configure TypeScript with shared tsconfig.json and path aliases
+  - Set up package.json scripts for development, build, and testing
+  - Configure ESLint and Prettier for code quality
+  - Create Docker Compose file for local PostgreSQL, Redis, and Neo4j
+  - Set up environment variable management with .env files
+  - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 1.11, 1.12, 1.13, 1.14, 1.15, 1.16, 1.17, 1.18_
+
+- [ ] 2. Implement database schema and ORM configuration
+  - [ ] 2.1 Set up Prisma ORM with PostgreSQL connection
+    - Install Prisma and initialize schema
+    - Configure database connection string and pooling
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 1.11, 1.12, 1.13, 1.14, 1.15, 1.16_
+  - [ ] 2.2 Create database schema for users, cards, transactions, and parties
+    - Define Prisma schema for users table with phone number and social auth fields
+    - Define card_designs table with JSONB fields for prompt_log and layer_tree
+    - Define gift_transactions table with Stripe and NeoCurrency references
+    - Define pop_parties and party_members tables for group gifting
+    - Define scheduled_jobs table for Bull queue persistence
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 1.11, 1.12, 1.13, 1.14, 1.15, 1.16_
+  - [ ] 2.3 Run migrations and seed development data
+    - Generate and run Prisma migrations
+    - Create seed script with sample users and templates
+    - _Requirements: 1.1, 1.2, 1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 1.10, 1.11, 1.12, 1.13, 1.14, 1.15, 1.16_
+  - [ ] 2.4 Set up Neo4j connection and graph schema
+    - Install Neo4j driver and configure connection
+    - Create Cypher scripts for Product, Category, Persona nodes
+    - Seed initial shopping persona data
+    - _Requirements: 1.16_
+
+- [ ] 3. Build authentication service and user management
+  - [ ] 3.1 Implement JWT token generation and validation
+    - Create utility functions for signing and verifying JWT tokens
+    - Implement refresh token logic with Redis storage
+    - Create authentication middleware for protected routes
+    - _Requirements: 1.1_
+  - [ ] 3.2 Implement phone number authentication flow
+    - Create POST /api/auth/phone/request-code endpoint with SMS sending via Twilio
+    - Create POST /api/auth/phone/verify-code endpoint with code validation
+    - Implement rate limiting for authentication attempts
+    - _Requirements: 1.1_
+  - [ ] 3.3 Implement social authentication (Apple and Google OAuth)
+    - Create POST /api/auth/social/apple endpoint with Apple Sign-In verification
+    - Create POST /api/auth/social/google endpoint with Google OAuth verification
+    - Implement VCard profile synchronization
+    - _Requirements: 1.1_
+  - [ ] 3.4 Create user profile management endpoints
+    - Create GET /api/auth/profile endpoint to fetch user data
+    - Create PUT /api/auth/profile endpoint to update profile
+    - Implement contact permission tracking
+    - _Requirements: 1.1, 1.2_
+
+- [ ] 4. Build frontend authentication and contact access
+  - [ ] 4.1 Create authentication UI components
+    - Build PhoneAuthForm component with phone input and verification code
+    - Build SocialAuthButtons component for Apple and Google login
+    - Implement authentication state management with React Context
+    - _Requirements: 1.1_
+  - [ ] 4.2 Implement contact list permission and access
+    - Create ContactPermissionModal component with native-style UI
+    - Integrate browser Contact Picker API for mobile devices
+    - Store contacts in frontend state for recipient/viewer selection
+    - _Requirements: 1.2_
+  - [ ] 4.3 Create protected route wrapper and session management
+    - Build ProtectedRoute component that checks authentication
+    - Implement automatic token refresh logic
+    - Handle authentication errors and redirects
+    - _Requirements: 1.1_
+
+- [ ] 5. Implement Neuro AI multi-agent system foundation
+  - [ ] 5.1 Set up Neuro AI SDK and orchestration agent
+    - Install and configure Neuro AI SDK
+    - Create OrchestrationAgent class with CardState management
+    - Implement agent sequencing logic and error handling
+    - _Requirements: 1.3, 1.5, 1.7, 1.17_
+  - [ ] 5.2 Define CardState interface and shared types
+    - Create TypeScript interfaces for CardState, LayerTree, Layer types
+    - Define MadlibInput, GiftCard, and ScheduleMetadata interfaces
+    - Export shared types to shared-types package
+    - _Requirements: 1.3, 1.4, 1.5, 1.6, 1.7_
+  - [ ] 5.3 Implement Illustrator Agent for card generation
+    - Create IllustratorAgent class that consumes MadlibInput
+    - Integrate with Google AI Studio (Imagen) API for image generation
+    - Generate three design variations with different styles
+    - Compose initial LayerTree with image, text, and shape layers
+    - _Requirements: 1.3, 1.17_
+  - [ ] 5.4 Implement Editor Agent for text and refinement
+    - Create EditorAgent class for layer manipulation
+    - Implement text layer addition with font and styling
+    - Add spell-check and grammar validation
+    - Generate draft salutation if user message is empty
+    - Handle AI-prompted layer edits
+    - _Requirements: 1.4, 1.5, 1.6, 1.7_
+  - [ ] 5.5 Implement Shopper Agent for gift card recommendations
+    - Create ShopperAgent class that analyzes recipient interests
+    - Integrate with NeoCurrency API to fetch catalog
+    - Query Neo4j knowledge graph for persona matching
+    - Score and rank gift cards, return top 3 recommendations
+    - _Requirements: 1.9, 1.16_
+  - [ ] 5.6 Implement Scheduling Assistant Agent
+    - Create SchedulingAssistantAgent class for message orchestration
+    - Integrate with Bull queue for scheduled job management
+    - Implement Twilio SMS sending logic
+    - Track card opened events and trigger viewer messages
+    - _Requirements: 1.11, 1.13, 1.14_
+
+- [ ] 6. Build card creation API endpoints
+  - [ ] 6.1 Create card generation endpoint
+    - Implement POST /api/cards/generate endpoint
+    - Accept MadlibInput and optional image upload
+    - Invoke Orchestration Agent to generate three previews
+    - Return CardPreview array with image URLs and layer trees
+    - Enforce 15-second timeout with appropriate error handling
+    - _Requirements: 1.3, 1.17_
+  - [ ] 6.2 Create card refinement endpoint
+    - Implement POST /api/cards/refine endpoint
+    - Accept refinement prompt and current CardState
+    - Re-invoke Illustrator and Editor agents
+    - Return updated CardPreview array
+    - _Requirements: 1.5_
+  - [ ] 6.3 Create layer editing endpoint
+    - Implement POST /api/cards/edit-layer endpoint
+    - Accept layer ID, edit type, and parameters
+    - Invoke Editor Agent for targeted layer modification
+    - Return updated LayerTree
+    - _Requirements: 1.6, 1.7_
+  - [ ] 6.4 Create card retrieval and storage endpoints
+    - Implement GET /api/cards/:id endpoint to fetch saved cards
+    - Implement POST /api/cards/:id/save endpoint to persist card designs
+    - Store final card images in S3/R2 with CDN URLs
+    - _Requirements: 1.3, 1.4, 1.5, 1.6, 1.7, 1.8_
+
+- [ ] 7. Build frontend card creation flow
+  - [ ] 7.1 Create Madlib prompt input screen
+    - Build MadlibPromptInput component with guided placeholders
+    - Implement ImageUploadButton with file picker and preview
+    - Add form validation for required fields
+    - _Requirements: 1.3_
+  - [ ] 7.2 Create template gallery component
+    - Build TemplateGallery with scrollable grid layout
+    - Fetch and display pre-designed templates
+    - Handle template selection to skip AI generation
+    - _Requirements: 1.4_
+  - [ ] 7.3 Create design preview and refinement screen
+    - Build DesignPreviewGrid to display three card options
+    - Implement RefinementPromptInput with bottom-pinned UI
+    - Add loading states and 15-second timeout handling
+    - Handle card selection to proceed to editor
+    - _Requirements: 1.3, 1.5, 1.17_
+  - [ ] 7.4 Integrate API calls for generation and refinement
+    - Connect MadlibPromptInput to POST /api/cards/generate
+    - Connect RefinementPromptInput to POST /api/cards/refine
+    - Implement error handling and retry logic
+    - _Requirements: 1.3, 1.5, 1.17_
+
+- [ ] 8. Build advanced card editor interface
+  - [ ] 8.1 Set up Konva.js canvas and layer rendering
+    - Install and configure Konva.js and react-konva
+    - Create CardCanvas component that renders LayerTree
+    - Implement layer selection with click handlers
+    - Add drag-and-drop for layer repositioning
+    - _Requirements: 1.6, 1.7_
+  - [ ] 8.2 Create top sub-navigation and contextual toolbar
+    - Build TopSubNav component with Edit, Effects, Animation, Buy, Schedule tabs
+    - Build LeftToolbar component that changes based on active tab
+    - Implement tab switching logic and state management
+    - _Requirements: 1.6, 1.7, 1.8_
+  - [ ] 8.3 Build text editing toolbar
+    - Create TextEditingToolbar with font, size, color, alignment controls
+    - Implement bold, italic, underline toggles
+    - Connect toolbar to selected text layer updates
+    - Call POST /api/cards/edit-layer for each change
+    - _Requirements: 1.6_
+  - [ ] 8.4 Build image editing tools
+    - Create image layer controls for crop, resize, and mask
+    - Implement image upload for new image layers
+    - Add delete functionality for selected layers
+    - _Requirements: 1.6_
+  - [ ] 8.5 Create layer tree panel and AI prompt interface
+    - Build LayerTreeView component with hierarchical display
+    - Implement bi-directional selection between canvas and tree
+    - Create AIPromptBox that pre-fills with selected layer context
+    - Add three recommended prompt suggestions as tooltips
+    - Connect AI prompts to POST /api/cards/edit-layer
+    - _Requirements: 1.6, 1.7_
+  - [ ] 8.6 Build effects panel
+    - Create EffectsPanel with text effects (shadow, glow, blur)
+    - Add image filters and shape color palettes
+    - Apply effects to selected layers or globally
+    - _Requirements: 1.8_
+  - [ ] 8.7 Build animation panel and timeline
+    - Create AnimationPanel with preset animations (typewriter, pop, spin, confetti)
+    - Build timeline control for animation timing
+    - Add audio integration for sound effects
+    - Store animation config in LayerTree
+    - _Requirements: 1.8_
+  - [ ] 8.8 Implement card preview with animation
+    - Create AnimatedCardRenderer component using Lottie
+    - Build Preview Card button that opens full-screen modal
+    - Render card with all animations and sound effects
+    - _Requirements: 1.8, 1.15_
+
+- [ ] 9. Implement gift card selection and product search
+  - [ ] 9.1 Create gift card recommendation display
+    - Build GiftCardRecommendations component showing top 3 cards
+    - Display merchant name, logo, and suggested value
+    - Fetch recommendations from Shopper Agent via API
+    - _Requirements: 1.9_
+  - [ ] 9.2 Build gift card catalog search
+    - Create GiftCardCatalogSearch component with searchable sidebar
+    - Implement POST /api/gift-cards/search endpoint
+    - Query NeoCurrency API for full 1,500+ merchant catalog
+    - Add filtering by category and merchant name
+    - _Requirements: 1.9_
+  - [ ] 9.3 Implement product-specific gift card search
+    - Create ProductSearchModal for Amazon and Walmart products
+    - Implement POST /api/gift-cards/products/search endpoint
+    - Query product APIs and calculate total with tax and shipping
+    - Generate product-specific gift card with pre-loaded cart data
+    - _Requirements: 1.16_
+  - [ ] 9.4 Create gift card value assignment
+    - Build GiftCardValueInput component for cash amount entry
+    - Validate minimum and maximum values per merchant
+    - Display calculated total with card fee and tax
+    - _Requirements: 1.9, 1.10_
+
+- [ ] 10. Build checkout and payment processing
+  - [ ] 10.1 Create checkout cart display
+    - Build CheckoutCart component with itemized breakdown
+    - Display $1.00 card fee, gift card value, and tax
+    - Show total amount prominently
+    - _Requirements: 1.10_
+  - [ ] 10.2 Integrate Stripe payment processing
+    - Install Stripe SDK and configure API keys
+    - Create POST /api/checkout/create-intent endpoint
+    - Create POST /api/checkout/confirm endpoint
+    - Implement Stripe webhook handler for payment confirmation
+    - _Requirements: 1.10_
+  - [ ] 10.3 Build payment form components
+    - Create StripePaymentForm with Stripe Elements
+    - Build ApplePayButton with Apple Pay integration
+    - Build GooglePayButton with Google Pay integration
+    - Handle payment errors and display user-friendly messages
+    - _Requirements: 1.10_
+  - [ ] 10.4 Implement signature and message input
+    - Create SignatureInput component for "From" line editing
+    - Allow sender to customize names for all party members
+    - Add final message input field
+    - _Requirements: 1.10_
+  - [ ] 10.5 Complete gift card purchase with NeoCurrency
+    - Call NeoCurrency API to issue gift card after payment success
+    - Store neocurrency_pass_id in gift_transactions table
+    - Create gift_transaction record with all payment details
+    - _Requirements: 1.9, 1.10_
+
+- [ ] 11. Implement group gifting orchestration
+  - [ ] 11.1 Create contact selector for recipients and viewers
+    - Build ContactSelector component with multi-select UI
+    - Use cached contact list from authentication flow
+    - Validate phone numbers for all selections
+    - _Requirements: 1.2, 1.11_
+  - [ ] 11.2 Build scheduling interface
+    - Create DateTimePicker component for delivery scheduling
+    - Validate scheduled time is in the future
+    - Display timezone information
+    - _Requirements: 1.13_
+  - [ ] 11.3 Generate invitation links and copy-paste text
+    - Implement POST /api/pop-party/create endpoint
+    - Generate unique invitation tokens for each viewer
+    - Create party_members records with invitation URLs
+    - Build InvitationTextDisplay component with copy button
+    - _Requirements: 1.11_
+  - [ ] 11.4 Implement custom sticker pack generation
+    - Create sticker pack generation service using card theme
+    - Generate 8-12 themed stickers based on occasion and style
+    - Store sticker pack URL in pop_parties table
+    - _Requirements: 1.12_
+  - [ ] 11.5 Set up Bull queue for scheduled delivery
+    - Install and configure Bull with Redis
+    - Create GiftDeliveryJob and ViewerMessageJob types
+    - Implement job processor for scheduled message sending
+    - Add retry logic for failed SMS deliveries
+    - _Requirements: 1.13, 1.14_
+
+- [ ] 12. Build viewer party page and message drafting
+  - [ ] 12.1 Create viewer invitation landing page
+    - Build invitation page that validates invitation token
+    - Redirect to authentication if viewer not logged in
+    - Display party details and finalized card preview
+    - _Requirements: 1.14_
+  - [ ] 12.2 Build party page with message drafting
+    - Create PartyPage component showing card and message input
+    - Build StickerPackSelector for inline sticker use
+    - Add StickerPackDownload button for keyboard integration
+    - _Requirements: 1.12, 1.14_
+  - [ ] 12.3 Implement viewer message scheduling
+    - Create POST /api/pop-party/:id/message endpoint
+    - Store viewer message in party_members table
+    - Create ViewerMessageJob scheduled for post-card-open
+    - Display confirmation with scheduled send time
+    - _Requirements: 1.14_
+
+- [ ] 13. Build recipient card experience and wallet integration
+  - [ ] 13.1 Create animated card reveal page
+    - Build AnimatedCardReveal component with full-screen Lottie animation
+    - Auto-play animation with sound effects on page load
+    - Implement CardOpenedTracker to record event timestamp
+    - Trigger viewer message delivery jobs on card open
+    - _Requirements: 1.15_
+  - [ ] 13.2 Implement wallet pass generation
+    - Create Wallet Pass Generator service for Apple Wallet (PassKit)
+    - Create Wallet Pass Generator service for Google Wallet
+    - Implement GET /api/wallet/apple/:giftCardId endpoint
+    - Implement GET /api/wallet/google/:giftCardId endpoint
+    - Fetch pass data from NeoCurrency API and sign with certificates
+    - _Requirements: 1.15_
+  - [ ] 13.3 Build wallet download button
+    - Create WalletDownloadButton component with prominent CTA
+    - Detect device type (iOS vs Android) for appropriate wallet
+    - Initiate wallet pass download on button click
+    - Handle download errors gracefully
+    - _Requirements: 1.15_
+
+- [ ] 14. Implement knowledge graph service for shopping personas
+  - [ ] 14.1 Set up Neo4j graph schema and seed data
+    - Create Cypher scripts for Product, Category, Persona nodes
+    - Define relationships: BELONGS_TO, PREFERS, LIKES, MATCHES
+    - Seed initial data with common products and personas
+    - _Requirements: 1.16_
+  - [ ] 14.2 Build persona matching algorithm
+    - Implement POST /api/personas/match endpoint
+    - Analyze recipient interests and occasion from MadlibInput
+    - Query Neo4j to find matching personas
+    - Return persona IDs for product recommendations
+    - _Requirements: 1.16_
+  - [ ] 14.3 Implement product recommendation engine
+    - Create GET /api/products/recommend endpoint
+    - Query Neo4j for products linked to matched personas
+    - Rank products by relevance score
+    - Return top product recommendations
+    - _Requirements: 1.16_
+  - [ ] 14.4 Build shopping behavior tracking
+    - Implement POST /api/analytics/track-behavior endpoint
+    - Record product views, selections, and purchases
+    - Update Neo4j graph with new relationships
+    - Respect user privacy settings for data collection
+    - _Requirements: 1.16_
+
+- [ ] 15. Implement messaging service with Twilio
+  - [ ] 15.1 Set up Twilio SDK and configuration
+    - Install Twilio SDK and configure account credentials
+    - Create utility functions for SMS sending
+    - Implement rate limiting to respect Twilio quotas
+    - _Requirements: 1.11, 1.13, 1.14_
+  - [ ] 15.2 Build gift delivery message sender
+    - Implement job processor for GiftDeliveryJob
+    - Send SMS with gift card link to recipient
+    - Include all viewers in group thread
+    - Log delivery status and handle failures
+    - _Requirements: 1.13_
+  - [ ] 15.3 Build viewer message sender
+    - Implement job processor for ViewerMessageJob
+    - Send viewer messages after card opened event
+    - Include custom stickers in message if supported
+    - Retry failed deliveries up to 3 times
+    - _Requirements: 1.14_
+
+- [ ] 16. Add caching and performance optimization
+  - [ ] 16.1 Implement Redis caching for API responses
+    - Set up Redis connection with connection pooling
+    - Cache NeoCurrency catalog with 1-hour TTL
+    - Cache gift card recommendations with 5-minute TTL
+    - Cache user sessions with 24-hour TTL
+    - _Requirements: 1.17_
+  - [ ] 16.2 Optimize database queries
+    - Add indexes for frequently queried fields
+    - Implement connection pooling for PostgreSQL
+    - Use EXPLAIN ANALYZE to identify slow queries
+    - Optimize JSONB queries for layer_tree and prompt_log
+    - _Requirements: 1.17_
+  - [ ] 16.3 Implement frontend performance optimizations
+    - Add code splitting with Next.js dynamic imports
+    - Implement lazy loading for template gallery and catalog
+    - Optimize images with Next.js Image component
+    - Add debouncing for AI prompt inputs (500ms)
+    - _Requirements: 1.17, 1.18_
+  - [ ] 16.4 Set up CDN for static assets
+    - Configure S3/R2 bucket for card images
+    - Set up CloudFront or Cloudflare CDN
+    - Implement image compression (WebP format)
+    - Add cache headers for optimal performance
+    - _Requirements: 1.17_
+
+- [ ] 17. Implement security measures
+  - [ ] 17.1 Add rate limiting and DDoS protection
+    - Implement rate limiting middleware for all API endpoints
+    - Configure Cloudflare or AWS Shield for DDoS protection
+    - Add CAPTCHA for authentication endpoints
+    - _Requirements: 1.1, 1.10_
+  - [ ] 17.2 Implement data encryption and protection
+    - Encrypt sensitive database fields (phone numbers)
+    - Ensure TLS 1.3 for all external API calls
+    - Implement webhook signature verification for Stripe and NeoCurrency
+    - _Requirements: 1.10_
+  - [ ] 17.3 Add audit logging for financial transactions
+    - Create audit_logs table for transaction tracking
+    - Log all payment attempts, successes, and failures
+    - Log gift card issuance and redemption events
+    - Implement log retention policy (90 days)
+    - _Requirements: 1.10_
+  - [ ] 17.4 Implement CORS and API security
+    - Configure CORS for allowed origins
+    - Add request size limits (10MB for uploads)
+    - Implement SQL injection prevention via Prisma
+    - Add XSS prevention headers
+    - _Requirements: 1.10, 1.18_
+
+- [ ] 18. Build monitoring and observability
+  - [ ] 18.1 Set up application metrics
+    - Implement metrics collection for request rate, error rate, latency
+    - Track AI generation time and success rate
+    - Monitor payment processing metrics
+    - Track scheduled message delivery success rate
+    - _Requirements: 1.17_
+  - [ ] 18.2 Implement structured logging
+    - Set up structured JSON logging with correlation IDs
+    - Configure log levels (ERROR, WARN, INFO, DEBUG)
+    - Implement sensitive data redaction
+    - Integrate with CloudWatch or Datadog
+    - _Requirements: 1.17_
+  - [ ] 18.3 Set up alerting
+    - Configure PagerDuty for critical errors
+    - Set up Slack notifications for warnings
+    - Create alerts for AI generation failures, payment errors, SMS failures
+    - Add database connection pool exhaustion alerts
+    - _Requirements: 1.17_
+  - [ ] 18.4 Implement distributed tracing
+    - Set up OpenTelemetry for distributed tracing
+    - Trace AI agent execution flows
+    - Track external API call latency
+    - Identify performance bottlenecks
+    - _Requirements: 1.17_
+
+- [ ]* 19. Write comprehensive tests
+  - [ ]* 19.1 Write unit tests for backend services
+    - Test authentication service (JWT, phone verification, OAuth)
+    - Test AI agents (Illustrator, Editor, Shopper, Scheduling Assistant)
+    - Test payment processing logic
+    - Test wallet pass generation
+    - _Requirements: All_
+  - [ ]* 19.2 Write unit tests for frontend components
+    - Test authentication components
+    - Test card creation flow components
+    - Test editor components and layer manipulation
+    - Test checkout and payment components
+    - _Requirements: All_
+  - [ ]* 19.3 Write integration tests for API endpoints
+    - Test complete card generation flow
+    - Test payment and gift card purchase flow
+    - Test group gifting orchestration
+    - Test scheduled message delivery
+    - _Requirements: All_
+  - [ ]* 19.4 Write end-to-end tests with Playwright
+    - Test complete gift creation and purchase flow
+    - Test group gifting from sender and viewer perspectives
+    - Test recipient card opening and wallet download
+    - Test on iOS Safari and Android Chrome
+    - _Requirements: All_
+  - [ ]* 19.5 Perform load testing
+    - Use k6 to simulate 1,000 concurrent users
+    - Test AI generation under load
+    - Test payment processing under load
+    - Identify and fix performance bottlenecks
+    - _Requirements: 1.17_
+
+- [ ] 20. Create deployment configuration and documentation
+  - [ ] 20.1 Create Docker configuration
+    - Write Dockerfile for backend-api
+    - Write Dockerfile for frontend-web
+    - Create docker-compose.yml for local development
+    - Configure multi-stage builds for production
+    - _Requirements: All_
+  - [ ] 20.2 Set up CI/CD pipeline
+    - Configure GitHub Actions for automated testing
+    - Add linting and type checking steps
+    - Implement automated deployment to staging
+    - Add manual approval for production deployment
+    - _Requirements: All_
+  - [ ] 20.3 Write deployment documentation
+    - Document environment variables and configuration
+    - Create deployment runbook for production
+    - Document database migration process
+    - Create troubleshooting guide
+    - _Requirements: All_
+  - [ ] 20.4 Create API documentation
+    - Document all API endpoints with request/response examples
+    - Create OpenAPI/Swagger specification
+    - Document authentication and authorization flows
+    - Document webhook integrations
+    - _Requirements: All_
