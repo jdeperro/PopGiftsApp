@@ -31,7 +31,7 @@ class SMSService {
     this.fromNumber = process.env.TWILIO_PHONE_NUMBER || '+18553890451';
 
     // Use mock if credentials are test credentials or not configured
-    const isTestCredentials = accountSid?.startsWith('ACtest') || false;
+    const isTestCredentials = accountSid?.startsWith('ACtest') ?? false;
     this.useMock = !accountSid || !authToken || isTestCredentials;
 
     if (this.useMock) {
