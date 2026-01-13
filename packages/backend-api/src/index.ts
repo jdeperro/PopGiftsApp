@@ -41,23 +41,42 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
-// Diagnostic endpoint for Google AI
-app.get('/debug/google-ai', async (req: Request, res: Response) => {
-  console.log('\n🔍 Google AI Diagnostic Check');
+// Comprehensive diagnostic endpoint
+app.get('/debug/env', async (req: Request, res: Response) => {
+  console.log('\n🔍 Environment Diagnostic Check');
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   
   const diagnostics = {
     timestamp: new Date().toISOString(),
+    deployment_info: {
+      node_env: process.env.NODE_ENV,
+      port: process.env.PORT,
+      commit_hash: process.env.RAILWAY_GIT_COMMIT_SHA || 'unknown'
+    },
     environment_variables: {
       GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY ? {
         exists: true,
         length: process.env.GOOGLE_AI_API_KEY.length,
-        starts_with: process.env.GOOGLE_AI_API_KEY.substring(0, 6) + '...',
-        format_valid: process.env.GOOGLE_AI_API_KEY.startsWith('AIza')
-      } : { exists: false },
-      GOOGLE_TEXT_MODEL: process.env.GOOGLE_TEXT_MODEL || 'NOT SET',
-      GOOGLE_IMAGE_MODEL: process.env.GOOGLE_IMAGE_MODEL || 'NOT SET'
+        starts_with: process.env.GOOGLE_AI_API_KEY.substring(0, 8) + '...',
+        ends_with: '...' + process.env.GOOGLE_AI_API_KEY.substring(process.env.GOOGLE_AI_API_KEY.length - 4),
+        format_valid: process.env.GOOGLE_AI_API_KEY.startsWith('AIza'),
+        is_literal_reference: process.env.GOOGLE_AI_API_KEY.includes('{{') || process.env.GOOGLE_AI_API_KEY.includes('shared')
+      } : { 
+        exists: false,
+        raw_value: process.env.GOOGLE_AI_API_KEY || 'undefined'
+      },
+      GOOGLE_TEXT_MODEL: {
+        value: process.env.GOOGLE_TEXT_MODEL || 'NOT SET',
+        is_default: !process.env.GOOGLE_TEXT_MODEL
+      },
+      GOOGLE_IMAGE_MODEL: {
+        value: process.env.GOOGLE_IMAGE_MODEL || 'NOT SET', 
+        is_default: !process.env.GOOGLE_IMAGE_MODEL
+      }
     },
+    all_env_keys: Object.keys(process.env).filter(key => 
+      key.includes('GOOGLE') || key.includes('API') || key.includes('MODEL')
+    ),
     google_ai_service: {
       initialized: false,
       connection_test: null as boolean | null,
@@ -109,7 +128,7 @@ app.use((req: Request, res: Response) => {
     message: `Route ${req.method} ${req.path} not found`,
     availableRoutes: [
       'GET /health',
-      'GET /debug/google-ai',
+      'GET /debug/env',
       'GET /api/cards/test',
       'POST /api/cards/generate',
       'POST /api/cards/generate-message',
