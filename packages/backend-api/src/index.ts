@@ -41,6 +41,63 @@ app.get('/health', (req: Request, res: Response) => {
   });
 });
 
+// Diagnostic endpoint for Google AI
+app.get('/debug/google-ai', async (req: Request, res: Response) => {
+  console.log('\n🔍 Google AI Diagnostic Check');
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
+  
+  const diagnostics = {
+    timestamp: new Date().toISOString(),
+    environment_variables: {
+      GOOGLE_AI_API_KEY: process.env.GOOGLE_AI_API_KEY ? {
+        exists: true,
+        length: process.env.GOOGLE_AI_API_KEY.length,
+        starts_with: process.env.GOOGLE_AI_API_KEY.substring(0, 6) + '...',
+        format_valid: process.env.GOOGLE_AI_API_KEY.startsWith('AIza')
+      } : { exists: false },
+      GOOGLE_TEXT_MODEL: process.env.GOOGLE_TEXT_MODEL || 'NOT SET',
+      GOOGLE_IMAGE_MODEL: process.env.GOOGLE_IMAGE_MODEL || 'NOT SET'
+    },
+    google_ai_service: {
+      initialized: false,
+      connection_test: null as boolean | null,
+      error: null as any
+    }
+  };
+
+  // Test Google AI Service
+  try {
+    const { googleAIService } = await import('./services/google-ai-service');
+    
+    console.log('🧪 Testing Google AI connection...');
+    const connectionResult = await googleAIService.testConnection();
+    
+    diagnostics.google_ai_service = {
+      initialized: true,
+      connection_test: connectionResult,
+      error: null
+    };
+    
+    console.log(`✅ Connection test result: ${connectionResult}`);
+    
+  } catch (error: any) {
+    console.error('❌ Google AI Service error:', error);
+    diagnostics.google_ai_service = {
+      initialized: false,
+      connection_test: false,
+      error: {
+        message: error.message,
+        name: error.name,
+        stack: error.stack?.split('\n').slice(0, 3)
+      }
+    };
+  }
+
+  console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
+  
+  res.json(diagnostics);
+});
+
 // API Routes
 app.use('/api/gift-cards', giftCardRoutes);
 app.use('/api/cards', cardRoutes);
@@ -52,6 +109,7 @@ app.use((req: Request, res: Response) => {
     message: `Route ${req.method} ${req.path} not found`,
     availableRoutes: [
       'GET /health',
+      'GET /debug/google-ai',
       'GET /api/cards/test',
       'POST /api/cards/generate',
       'POST /api/cards/generate-message',
