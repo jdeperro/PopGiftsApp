@@ -6,9 +6,12 @@
 
 import { GoogleGenerativeAI } from '@google/generative-ai';
 import * as dotenv from 'dotenv';
+import path from 'path';
 
-// Ensure .env is loaded
+// Ensure .env is loaded from multiple possible locations
 dotenv.config();
+dotenv.config({ path: path.join(__dirname, '../.env') });
+dotenv.config({ path: path.join(__dirname, '../../.env') });
 
 export interface MadlibInput {
   recipient_name: string;

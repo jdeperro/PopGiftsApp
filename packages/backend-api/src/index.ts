@@ -5,7 +5,12 @@
 
 // Load environment variables FIRST
 import dotenv from 'dotenv';
-dotenv.config();
+import path from 'path';
+
+// Try multiple .env locations for Railway compatibility
+dotenv.config(); // Current directory
+dotenv.config({ path: path.join(__dirname, '../.env') }); // Parent directory
+dotenv.config({ path: path.join(__dirname, '../../.env') }); // Root directory
 
 import express, { Request, Response, NextFunction } from 'express';
 import cors from 'cors';
@@ -77,6 +82,14 @@ app.listen(PORT, () => {
   console.log(`🎁 Gift Cards API: http://localhost:${PORT}/api/gift-cards/catalog`);
   console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
   console.log(`🌍 Environment: ${process.env.NODE_ENV || 'development'}`);
+  
+  // Debug environment variables
+  console.log('🔍 Environment Variables Debug:');
+  console.log(`   GOOGLE_AI_API_KEY: ${process.env.GOOGLE_AI_API_KEY ? 'SET (length: ' + process.env.GOOGLE_AI_API_KEY.length + ')' : 'NOT SET'}`);
+  console.log(`   GOOGLE_TEXT_MODEL: ${process.env.GOOGLE_TEXT_MODEL || 'NOT SET'}`);
+  console.log(`   GOOGLE_IMAGE_MODEL: ${process.env.GOOGLE_IMAGE_MODEL || 'NOT SET'}`);
+  console.log(`   TWILIO_ACCOUNT_SID: ${process.env.TWILIO_ACCOUNT_SID ? 'SET' : 'NOT SET'}`);
+  
   console.log(`✅ Google AI: ${process.env.GOOGLE_AI_API_KEY ? 'Configured' : 'Not configured'}`);
   console.log(`✅ Twilio SMS: ${process.env.TWILIO_ACCOUNT_SID ? 'Configured' : 'Not configured'}`);
   console.log(`✅ Gift Cards: Mock service ready`);
