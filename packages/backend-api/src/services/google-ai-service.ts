@@ -32,31 +32,37 @@ export interface CardDesign {
 }
 
 class GoogleAIService {
-  private genAI: GoogleGenerativeAI;
-  private textModel: string;
-  private imageModel: string;
+  private genAI: GoogleGenerativeAI | null = null;
+  private textModel: string = '';
+  private imageModel: string = '';
+  private initialized: boolean = false;
 
-  constructor() {
+  private initialize() {
+    if (this.initialized) return;
+    
     const apiKey = process.env.GOOGLE_AI_API_KEY;
     
     if (!apiKey) {
       console.warn('⚠️  GOOGLE_AI_API_KEY not configured - AI features will not work');
-      this.genAI = null as any;
+      this.genAI = null;
       this.textModel = '';
       this.imageModel = '';
+      this.initialized = true;
       return;
     }
 
     this.genAI = new GoogleGenerativeAI(apiKey);
     this.textModel = process.env.GOOGLE_TEXT_MODEL || 'gemini-2.5-flash';
     this.imageModel = process.env.GOOGLE_IMAGE_MODEL || 'imagen-3';
-
-    console.log('🤖 Google AI service initialized');
-    console.log(`   Text model: ${this.textModel}`);
-    console.log(`   Image model: ${this.imageModel}`);
+    this.initialized = true;
+    
+    console.log('✅ Google AI Service initialized successfully');
+    console.log(`   Text Model: ${this.textModel}`);
+    console.log(`   Image Model: ${this.imageModel}`);
   }
 
   private ensureInitialized() {
+    this.initialize();
     if (!this.genAI) {
       throw new Error('Google AI service not initialized - check GOOGLE_AI_API_KEY');
     }
@@ -90,7 +96,8 @@ class GoogleAIService {
    * Generate 3 image prompts using Gemini
    */
   private async generateImagePrompts(input: MadlibInput): Promise<string[]> {
-    const model = this.genAI.getGenerativeModel({ model: this.textModel });
+    this.ensureInitialized();
+    const model = this.genAI!.getGenerativeModel({ model: this.textModel });
 
     const systemPrompt = `You are an expert at creating detailed image generation prompts for greeting cards.
 Create 3 different, creative prompts for generating a ${input.occasion} card for ${input.recipient_name}.
@@ -165,7 +172,8 @@ Return ONLY the 3 prompts, one per line, numbered 1-3.`;
    * Generate a heartfelt message using Gemini
    */
   async generateMessage(input: MadlibInput): Promise<string> {
-    const model = this.genAI.getGenerativeModel({ model: this.textModel });
+    this.ensureInitialized();
+    const model = this.genAI!.getGenerativeModel({ model: this.textModel });
 
     const prompt = `Write a short, heartfelt ${input.occasion} message for ${input.recipient_name}.
 ${input.age ? `They are turning ${input.age} years old.` : ''}
@@ -193,13 +201,32 @@ Return ONLY the message, no quotes or extra text.`;
   }
 
   /**
+   * Test the connection
+   */
+  async testConnection(): Promise<boolean> {
+    try {
+      this.ensureInitialized();
+      const model = this.genAI!.getGenerativeModel({ model: this.textModel });
+      const result = await model.generateContent('Say "Hello from Google AI!"');
+      const response = result.response;
+      console.log('✅ Google AI connection test successful');
+      console.log(`   Response: ${response.text()}`);
+      return true;
+    } catch (error) {
+      console.error('❌ Google AI connection test failed:', error);
+      return false;
+    }
+  }
+
+  /**
    * Refine a card design based on user feedback
    */
   async refineCardDesign(
     originalPrompt: string,
     refinementRequest: string
   ): Promise<CardDesign> {
-    const model = this.genAI.getGenerativeModel({ model: this.textModel });
+    this.ensureInitialized();
+    const model = this.genAI!.getGenerativeModel({ model: this.textModel });
 
     const prompt = `Original image prompt: "${originalPrompt}"
 
@@ -228,7 +255,8 @@ Return ONLY the new prompt, no explanation.`;
    * Check grammar and spelling
    */
   async checkGrammar(text: string): Promise<string> {
-    const model = this.genAI.getGenerativeModel({ model: this.textModel });
+    this.ensureInitialized();
+    const model = this.genAI!.getGenerativeModel({ model: this.textModel });
 
     const prompt = `Fix any grammar, spelling, or punctuation errors in this text.
 Return ONLY the corrected text, no explanation.
@@ -257,23 +285,6 @@ Text: "${text}"`;
       `An elegant ${occasion} card with a minimalist design, featuring soft pastel colors and delicate decorations. Subtle references to ${interests}. Clean, sophisticated style.`,
       `A playful, fun ${occasion} card with bold colors and dynamic composition. Incorporate elements of ${interests} in a creative way. Energetic and cheerful mood.`
     ];
-  }
-
-  /**
-   * Test the connection
-   */
-  async testConnection(): Promise<boolean> {
-    try {
-      const model = this.genAI.getGenerativeModel({ model: this.textModel });
-      const result = await model.generateContent('Say "Hello from Google AI!"');
-      const response = result.response;
-      console.log('✅ Google AI connection test successful');
-      console.log(`   Response: ${response.text()}`);
-      return true;
-    } catch (error) {
-      console.error('❌ Google AI connection test failed:', error);
-      return false;
-    }
   }
 }
 
