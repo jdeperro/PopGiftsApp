@@ -5,11 +5,12 @@ FROM node:18-alpine
 WORKDIR /app
 
 # Copy package files
-COPY packages/backend-api/package*.json ./packages/backend-api/
-COPY package*.json ./
+COPY packages/backend-api/package.json ./packages/backend-api/
+COPY packages/backend-api/package-lock.json ./packages/backend-api/
+COPY package.json ./
 
 # Install dependencies
-RUN cd packages/backend-api && npm ci --only=production
+RUN cd packages/backend-api && npm ci --omit=dev
 
 # Copy source code
 COPY packages/backend-api ./packages/backend-api
